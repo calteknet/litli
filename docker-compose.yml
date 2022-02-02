@@ -1,0 +1,49 @@
+version: '3.1'
+
+services:
+    openacs:
+        image: ctn/litli
+        volumes:
+            - content:/var/www/openacs/content-repository-content-files
+        depends_on:
+            - postgres
+        ports:
+            - 172.19.0.2:8087:80
+        secrets:
+            - psql_password
+            - psql_user
+            - config_vars
+
+        healthcheck:
+            test: ["CMD-SHELL", "wget -qO - http://localhost:80/SYSTEM/openacs-test || exit 1"]
+            interval: 10s
+            timeout: 5s
+            retries: 2
+
+    postgres:
+        image: postgres:10-alpine
+        secrets:
+            - psql_password
+            - psql_user
+        environment:
+            POSTGRES_PASSWORD_FILE: /run/secrets/psql_password
+            POSTGRES_USER_FILE: /run/secrets/psql_user
+            POSTGRES_DB: openacs
+        volumes:
+            - db_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U openacs"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+volumes:
+    db_data:
+    content:
+secrets:
+    psql_user:
+        file: ./psql_user.txt
+    psql_password:
+        file: ./psql_password.txt
+    config_vars:
+        file: ./config_vars.tcl
+
